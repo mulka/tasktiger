@@ -73,9 +73,21 @@ design tradeoffs. Here are the main differences:
 
 - **Periodic tasks without a separate process**
 
-  TaskTiger workers manage periodic task scheduling internally. Celery
-  requires a separate ``celery beat`` process to emit periodic tasks, adding
-  another component to deploy and monitor.
+  TaskTiger workers manage periodic task scheduling internally—there is no
+  separate scheduler process to deploy and monitor. When a worker starts, it
+  checks each periodic task it is responsible for and queues it for the next
+  scheduled time if it isn't already queued. Because periodic tasks are
+  automatically marked as unique, multiple workers can safely run the same
+  periodic task definitions without creating duplicates: the unique-task
+  mechanism ensures only one instance of each periodic task exists in the
+  queue at a time. Right before a periodic task is executed, the worker
+  queues the task for its next scheduled period, so the cycle continues even
+  if the executing worker crashes after that point.
+
+  In contrast, Celery requires a separate ``celery beat`` process that emits
+  periodic tasks on a schedule. Only one ``celery beat`` instance can run at
+  a time to avoid duplicate submissions, which makes it a single point of
+  failure that must be managed separately.
 
 - **Atomic state management**
 
