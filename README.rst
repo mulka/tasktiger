@@ -15,6 +15,97 @@ TaskTiger
 
 .. contents:: Contents
 
+How is this different from Celery?
+----------------------------------
+
+TaskTiger and Celery are both Python task queues, but they make different
+design tradeoffs. Here are the main differences:
+
+- **Redis-only broker**
+
+  TaskTiger is built exclusively on Redis. Celery supports multiple brokers
+  (RabbitMQ, Redis, Amazon SQS, and others). If you already rely on Redis and
+  don't need the flexibility of swapping brokers, TaskTiger offers a simpler
+  operational model with no extra infrastructure beyond Redis.
+
+- **Per-task forking**
+
+  By default, TaskTiger forks a new subprocess for each task. This isolates
+  tasks from each other, prevents memory leaks from accumulating across tasks,
+  and allows enforcing hard time limits by killing the subprocess. Celery's
+  prefork pool reuses a fixed set of worker processes across many tasks, which
+  reduces forking overhead but can accumulate leaked memory and makes hard time
+  limits more difficult to enforce reliably. TaskTiger also offers a
+  synchronous execution mode for workloads where forking overhead matters.
+
+- **Unique tasks**
+
+  TaskTiger has built-in support for unique tasks: if an identical task
+  (same function, args, and kwargs) is already in the queue, it won't be
+  added again. Celery has no native equivalent; achieving deduplication
+  typically requires an external locking mechanism or a custom solution.
+
+- **Task locks**
+
+  TaskTiger can automatically acquire a lock for a task so that only one
+  instance of a task with given arguments runs at a time. Tasks that hit a
+  lock are requeued for later execution. Celery does not provide this
+  out of the box; you would typically implement it yourself using a
+  distributed lock.
+
+- **Subqueues with fair processing**
+
+  TaskTiger supports hierarchical subqueues (e.g.
+  ``process_emails.CUSTOMER_A``, ``process_emails.CUSTOMER_B``). Workers
+  randomly select from available subqueues, ensuring fair treatment across
+  tenants—one customer queueing thousands of tasks cannot starve another
+  customer's work. Celery uses flat queue routing; achieving similar fairness
+  typically requires manual queue management and multiple worker pools.
+
+- **Batch processing**
+
+  TaskTiger natively supports batch queues, where multiple queued tasks are
+  passed together to a single task function invocation. This can significantly
+  improve throughput for workloads like bulk database writes or API calls.
+  Celery provides ``chunks`` and ``group`` primitives for batching at the
+  caller side, but does not support combining independently queued tasks into
+  a single execution.
+
+- **Periodic tasks without a separate process**
+
+  TaskTiger workers manage periodic task scheduling internally. Celery
+  requires a separate ``celery beat`` process to emit periodic tasks, adding
+  another component to deploy and monitor.
+
+- **Atomic state management**
+
+  TaskTiger uses Redis Lua scripts to atomically move tasks between states
+  (queued, active, scheduled, error). This makes state transitions reliable
+  even if a worker crashes mid-operation. Celery relies on the broker's
+  message acknowledgment mechanism, which varies by backend.
+
+- **Simpler dependency footprint**
+
+  TaskTiger has a small set of dependencies (``redis``, ``click``,
+  ``structlog``). Celery has a larger dependency tree and more configuration
+  surface area, which reflects its broader scope and feature set.
+
+- **Scope and ecosystem**
+
+  Celery is a mature, widely adopted project with an extensive ecosystem:
+  monitoring tools (Flower), multiple result backends, Canvas workflows
+  (chains, chords, groups), and broad community support. TaskTiger is
+  intentionally smaller in scope—it focuses on reliable task execution with
+  Redis and provides features like unique tasks, locks, and subqueues that
+  are important for multi-tenant applications but not available in Celery
+  without additional work.
+
+In short, TaskTiger is a good fit when you use Redis, want per-task isolation,
+and need built-in support for unique tasks, locks, or fair multi-tenant queue
+processing. Celery is a better fit when you need broker flexibility, Canvas
+workflows, or the breadth of its ecosystem.
+
+
 Features
 --------
 
