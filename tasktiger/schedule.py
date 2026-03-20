@@ -6,12 +6,24 @@ __all__ = ["periodic", "cron_expr"]
 START_DATE = datetime.datetime(2000, 1, 1)
 
 
+def _ensure_utc(dt: datetime.datetime) -> datetime.datetime:
+    """Treat naive datetimes as UTC."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=datetime.timezone.utc)
+    return dt
+
+
 def _periodic(
     dt: datetime.datetime,
     period: int,
     start_date: datetime.datetime,
     end_date: datetime.datetime,
 ) -> datetime.datetime | None:
+    if dt.tzinfo is not None:
+        start_date = _ensure_utc(start_date)
+        if end_date:
+            end_date = _ensure_utc(end_date)
+
     if end_date and dt >= end_date:
         return None
 
@@ -65,9 +77,11 @@ def _cron_expr(
     end_date: datetime.datetime | None = None,
 ) -> datetime.datetime | None:
     import croniter  # type: ignore
-    import pytz  # type: ignore
 
-    localize = pytz.utc.localize
+    if dt.tzinfo is not None:
+        start_date = _ensure_utc(start_date)
+        if end_date:
+            end_date = _ensure_utc(end_date)
 
     if end_date and dt >= end_date:
         return None
@@ -77,11 +91,7 @@ def _cron_expr(
 
     assert croniter.croniter.is_valid(expr), "Cron expression is not valid."
 
-    start_date = localize(start_date)
-    dt = localize(dt)
-
     next_utc = croniter.croniter(expr, dt).get_next(ret_type=datetime.datetime)
-    next_utc = next_utc.replace(tzinfo=None)
 
     # Make sure the time is still within bounds.
     if end_date and next_utc > end_date:

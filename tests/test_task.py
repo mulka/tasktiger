@@ -55,7 +55,7 @@ class TestTaskMaxTrackedExecutions:
 
 
 class TestScheduledAt:
-    FROZEN_NOW = datetime.datetime(2024, 1, 1, 12, 0, 0)
+    FROZEN_NOW = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
 
     def test_immediate_task_scheduled_at_equals_queue_time(self, tiger):
         with FreezeTime(self.FROZEN_NOW):
