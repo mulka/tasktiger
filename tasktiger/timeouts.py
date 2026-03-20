@@ -1,6 +1,6 @@
 import signal
 from types import TracebackType
-from typing import Any, Literal, Optional, Type
+from typing import Any, Literal
 
 from .exceptions import JobTimeoutException
 
@@ -16,9 +16,9 @@ class BaseDeathPenalty:
 
     def __exit__(
         self,
-        type: Optional[Type[BaseException]],
-        value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        type: type[BaseException] | None,
+        value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> Literal[False]:
         # Always cancel immediately, since we're done
         try:

@@ -12,14 +12,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Collection,
-    Dict,
-    List,
     Literal,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
 )
 
 from redis.client import PubSub
@@ -58,12 +51,12 @@ class Worker:
     def __init__(
         self,
         tiger: "TaskTiger",
-        queues: Optional[List[str]] = None,
-        exclude_queues: Optional[List[str]] = None,
-        single_worker_queues: Optional[List[str]] = None,
-        max_workers_per_queue: Optional[int] = None,
-        store_tracebacks: Optional[bool] = None,
-        executor_class: Optional[Type[Executor]] = None,
+        queues: list[str] | None = None,
+        exclude_queues: list[str] | None = None,
+        single_worker_queues: list[str] | None = None,
+        max_workers_per_queue: int | None = None,
+        store_tracebacks: bool | None = None,
+        executor_class: type[Executor] | None = None,
     ) -> None:
         """
         Internal method to initialize a worker.
@@ -80,7 +73,7 @@ class Worker:
         self._key = tiger._key
         self._did_work = True
         self._last_task_check = 0.0
-        self.stats_thread: Optional[StatsThread] = None
+        self.stats_thread: StatsThread | None = None
         self.id = str(uuid.uuid4())
 
         if executor_class is None:
@@ -109,7 +102,7 @@ class Worker:
             self.single_worker_queues = set()
 
         if max_workers_per_queue:
-            self.max_workers_per_queue: Optional[int] = max_workers_per_queue
+            self.max_workers_per_queue: int | None = max_workers_per_queue
         else:
             self.max_workers_per_queue = None
         assert self.max_workers_per_queue is None or self.max_workers_per_queue >= 1
@@ -149,7 +142,7 @@ class Worker:
         signal.signal(signal.SIGINT, signal.SIG_DFL)
         signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
-    def _filter_queues(self, queues: Collection[str]) -> List[str]:
+    def _filter_queues(self, queues: Collection[str]) -> list[str]:
         """
         Applies the queue filter to the given list of queues and returns the
         queues that match. Note that a queue name matches any subqueues
@@ -355,7 +348,7 @@ class Worker:
                     "failed to release lock queue_expired_tasks on full batch"
                 )
 
-    def get_hard_timeouts(self, func: Any, tasks: List[Task]) -> List[float]:
+    def get_hard_timeouts(self, func: Any, tasks: list[Task]) -> list[float]:
         is_batch_func = getattr(func, "_task_batch", False)
         if is_batch_func:
             task_timeouts = [
@@ -390,7 +383,7 @@ class Worker:
 
     def _get_queue_lock(
         self, queue: str, log: BoundLogger
-    ) -> Union[Tuple[None, Literal[True]], Tuple[Optional[Semaphore], Literal[False]]]:
+    ) -> tuple[None, Literal[True]] | tuple[Semaphore | None, Literal[False]]:
         """Get queue lock for max worker queues.
 
         For max worker queues it returns a Lock if acquired and whether
@@ -441,7 +434,7 @@ class Worker:
         start_time: float,
         timeout: float,
         batch_timeout: float,
-    ) -> Tuple[bool, float]:
+    ) -> tuple[bool, float]:
         """Process a queue message from activity channel."""
 
         for queue in self._filter_queues([message_queue]):
@@ -460,8 +453,8 @@ class Worker:
     def _process_queue_tasks(
         self,
         queue: str,
-        queue_lock: Optional[Semaphore],
-        task_ids: Set[str],
+        queue_lock: Semaphore | None,
+        task_ids: set[str],
         now: float,
         log: BoundLogger,
     ) -> int:
@@ -507,7 +500,7 @@ class Worker:
                 tasks.append(task)
 
         # Group by task func
-        tasks_by_func: Dict[str, List[Task]] = OrderedDict()
+        tasks_by_func: dict[str, list[Task]] = OrderedDict()
         for task in tasks:
             func = task.serialized_func
             if func in tasks_by_func:
@@ -527,7 +520,7 @@ class Worker:
 
         return processed_count
 
-    def _process_from_queue(self, queue: str) -> Tuple[List[str], int]:
+    def _process_from_queue(self, queue: str) -> tuple[list[str], int]:
         """
         Internal method to process a task batch from the given queue.
 
@@ -596,7 +589,7 @@ class Worker:
 
         return task_ids, processed_count
 
-    def _prepare_execution(self, tasks: List[Task]) -> None:
+    def _prepare_execution(self, tasks: list[Task]) -> None:
         # The tasks must use the same function.
         assert len(tasks)
         serialized_task_func = tasks[0].serialized_func
@@ -609,9 +602,9 @@ class Worker:
     def _execute_task_group(
         self,
         queue: str,
-        tasks: List[Task],
-        queue_lock: Optional[Semaphore],
-    ) -> Tuple[bool, List[Task]]:
+        tasks: list[Task],
+        queue_lock: Semaphore | None,
+    ) -> tuple[bool, list[Task]]:
         """
         Executes the given tasks in the queue as long as they are not locked,
         and updates their heartbeats. This internal method is only meant to be
@@ -911,7 +904,7 @@ class Worker:
             self._filter_queues(self._retrieve_queues(self._key(QUEUED)))
         )
 
-    def _retrieve_queues(self, key: str) -> Set[str]:
+    def _retrieve_queues(self, key: str) -> set[str]:
         if len(self.only_queues) != 1:
             return self.connection.smembers(key)
 
@@ -920,7 +913,7 @@ class Worker:
 
         return set(self.connection.sscan_iter(key, match=match, count=100000))
 
-    def store_task_execution(self, tasks: List[Task], execution: Dict) -> None:
+    def store_task_execution(self, tasks: list[Task], execution: dict) -> None:
         serialized_execution = json.dumps(execution)
 
         for task in tasks:
@@ -940,7 +933,7 @@ class Worker:
         self,
         once: bool = False,
         force_once: bool = False,
-        exit_after: Optional[datetime.timedelta] = None,
+        exit_after: datetime.timedelta | None = None,
     ) -> None:
         """
         Main loop of the worker.
@@ -987,7 +980,7 @@ class Worker:
         # XXX: This can get inefficient when having lots of queues.
 
         if self.config["POLL_TASK_QUEUES_INTERVAL"]:
-            self._pubsub: Optional[PubSub] = None
+            self._pubsub: PubSub | None = None
         else:
             self._pubsub = self.connection.pubsub()
             assert self._pubsub is not None

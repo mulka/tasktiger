@@ -15,9 +15,6 @@ from typing import (
     Any,
     Collection,
     ContextManager,
-    Dict,
-    List,
-    Optional,
 )
 
 from redis.exceptions import LockError
@@ -47,7 +44,7 @@ def sigchld_handler(*args: Any) -> None:
 
 
 class WorkerContextManagerStack(ExitStack):
-    def __init__(self, context_managers: List[ContextManager]) -> None:
+    def __init__(self, context_managers: list[ContextManager]) -> None:
         super(WorkerContextManagerStack, self).__init__()
 
         for mgr in context_managers:
@@ -69,7 +66,7 @@ class Executor:
         task_ids: Collection[str],
         log: BoundLogger,
         locks: Collection[Lock],
-        queue_lock: Optional[Semaphore],
+        queue_lock: Semaphore | None,
     ) -> None:
         self.worker.heartbeat(queue, task_ids)
         for lock in locks:
@@ -85,10 +82,10 @@ class Executor:
     def execute(
         self,
         queue: str,
-        tasks: List[Task],
+        tasks: list[Task],
         log: BoundLogger,
         locks: Collection[Lock],
-        queue_lock: Optional[Semaphore],
+        queue_lock: Semaphore | None,
     ) -> bool:
         """
         Executes the given tasks. Returns a boolean indicating whether
@@ -107,7 +104,7 @@ class Executor:
         """
         raise NotImplementedError
 
-    def execute_tasks(self, tasks: List[Task], log: BoundLogger) -> bool:
+    def execute_tasks(self, tasks: list[Task], log: BoundLogger) -> bool:
         """
         Executes the tasks in the current process. Multiple tasks can be passed
         for batch processing. However, they must all use the same function and
@@ -115,7 +112,7 @@ class Executor:
         """
         success = False
 
-        execution: Dict[str, Any] = {}
+        execution: dict[str, Any] = {}
 
         assert len(tasks)
         task_func = tasks[0].serialized_func
@@ -186,10 +183,10 @@ class ForkExecutor(Executor):
     def execute(
         self,
         queue: str,
-        tasks: List[Task],
+        tasks: list[Task],
         log: BoundLogger,
         locks: Collection[Lock],
-        queue_lock: Optional[Semaphore],
+        queue_lock: Semaphore | None,
     ) -> bool:
         task_func = tasks[0].func
         serialized_task_func = tasks[0].serialized_func
@@ -260,7 +257,7 @@ class ForkExecutor(Executor):
             # read from pipe_r).
             old_wakeup_fd = signal.set_wakeup_fd(pipe_w)
 
-            def check_child_exit() -> Optional[int]:
+            def check_child_exit() -> int | None:
                 """
                 Do a non-blocking check to see if the child process exited.
                 Returns None if the process is still running, or the exit code
@@ -394,7 +391,7 @@ class SyncExecutor(Executor):
         task_ids: Collection[str],
         log: BoundLogger,
         locks: Collection[Lock],
-        queue_lock: Optional[Semaphore],
+        queue_lock: Semaphore | None,
         stop_event: threading.Event,
     ) -> None:
         while not stop_event.wait(self.config["ACTIVE_TASK_UPDATE_TIMER"]):
@@ -406,10 +403,10 @@ class SyncExecutor(Executor):
     def execute(
         self,
         queue: str,
-        tasks: List[Task],
+        tasks: list[Task],
         log: BoundLogger,
         locks: Collection[Lock],
-        queue_lock: Optional[Semaphore],
+        queue_lock: Semaphore | None,
     ) -> bool:
         assert tasks
 

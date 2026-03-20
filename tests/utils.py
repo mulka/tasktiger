@@ -88,5 +88,5 @@ def external_worker(n=None, patch_config=None, worker_kwargs=None):
 
 
 def sleep_until_next_second():
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     time.sleep(1 - now.microsecond / 10.0**6)

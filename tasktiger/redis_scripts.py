@@ -1,5 +1,5 @@
 import os
-from typing import Any, Callable, List, Literal, Optional, Tuple, Union
+from typing import Any, Callable, Literal
 
 from redis import Redis
 
@@ -363,7 +363,7 @@ class RedisScripts:
         return self._can_replicate_commands
 
     def register_script_from_file(
-        self, filename: str, include_functions: Optional[dict] = None
+        self, filename: str, include_functions: dict | None = None
     ) -> Script:
         with open(
             os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)
@@ -388,7 +388,7 @@ class RedisScripts:
         score: float,
         member: str,
         mode: str,
-        client: Optional[Redis] = None,
+        client: Redis | None = None,
     ) -> int:
         """
         Like ZADD, but supports different score update modes, in case the
@@ -415,9 +415,9 @@ class RedisScripts:
         source: str,
         destination: str,
         count: int,
-        score: Optional[Union[float, Literal["+inf"]]],
+        score: float | Literal["+inf"] | None,
         new_score: float,
-        client: Optional[Redis] = None,
+        client: Redis | None = None,
         withscores: bool = False,
         on_success: Any = None,
         if_exists: Any = None,
@@ -527,7 +527,7 @@ class RedisScripts:
         key: str,
         member: str,
         other_key: str,
-        client: Optional[Redis] = None,
+        client: Redis | None = None,
     ) -> int:
         """
         Removes ``member`` from the set ``key`` if ``other_key`` does not
@@ -539,10 +539,10 @@ class RedisScripts:
 
     def delete_if_not_in_zsets(
         self,
-        to_delete: List[str],
+        to_delete: list[str],
         value: str,
-        zsets: List[str],
-        client: Optional[Redis] = None,
+        zsets: list[str],
+        client: Redis | None = None,
     ) -> int:
         """
         Removes keys in ``to_delete`` only if ``value`` is not a member of any
@@ -555,7 +555,7 @@ class RedisScripts:
         )
 
     def fail_if_not_in_zset(
-        self, key: str, member: str, client: Optional[Redis] = None
+        self, key: str, member: str, client: Redis | None = None
     ) -> None:
         """
         Fails with an error containing the string '<FAIL_IF_NOT_IN_ZSET>' if
@@ -570,8 +570,8 @@ class RedisScripts:
         key_prefix: str,
         time: float,
         batch_size: int,
-        client: Optional[Redis] = None,
-    ) -> List[Tuple[str, str]]:
+        client: Redis | None = None,
+    ) -> list[tuple[str, str]]:
         """
         Returns a list of expired tasks (older than ``time``) by looking at all
         active queues. The list is capped at ``batch_size``. The list contains
@@ -607,13 +607,13 @@ class RedisScripts:
         id: str,
         queue: str,
         from_state: str,
-        to_state: Optional[str],
+        to_state: str | None,
         unique: bool,
         when: float,
-        mode: Optional[str],
+        mode: str | None,
         key_func: Callable[..., str],
         publish_queued_tasks: bool,
-        client: Optional[Redis] = None,
+        client: Redis | None = None,
     ) -> Any:
         """
         Refer to task._move internal helper documentation.
@@ -622,7 +622,7 @@ class RedisScripts:
         def _bool_to_str(v: bool) -> str:
             return "true" if v else "false"
 
-        def _none_to_empty_str(v: Optional[str]) -> str:
+        def _none_to_empty_str(v: str | None) -> str:
             return v or ""
 
         key_task_id = key_func("task", id)

@@ -7,12 +7,6 @@ from typing import (
     Any,
     Callable,
     Collection,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
 )
 
 import redis
@@ -44,28 +38,28 @@ class Task:
     def __init__(
         self,
         tiger: "TaskTiger",
-        func: Optional[Callable] = None,
-        args: Optional[Any] = None,
-        kwargs: Optional[Any] = None,
-        queue: Optional[str] = None,
-        hard_timeout: Optional[float] = None,
-        unique: Optional[bool] = None,
-        unique_key: Optional[Collection[str]] = None,
-        lock: Optional[bool] = None,
-        lock_key: Optional[Collection[str]] = None,
-        retry: Optional[bool] = None,
-        retry_on: Optional[Collection[Type[BaseException]]] = None,
-        retry_method: Optional[
-            Union[Callable[[int], float], Tuple[Callable[..., float], Tuple]]
-        ] = None,
-        max_queue_size: Optional[int] = None,
-        max_stored_executions: Optional[int] = None,
-        runner_class: Optional[Type["BaseRunner"]] = None,
+        func: Callable | None = None,
+        args: Any | None = None,
+        kwargs: Any | None = None,
+        queue: str | None = None,
+        hard_timeout: float | None = None,
+        unique: bool | None = None,
+        unique_key: Collection[str] | None = None,
+        lock: bool | None = None,
+        lock_key: Collection[str] | None = None,
+        retry: bool | None = None,
+        retry_on: Collection[type[BaseException]] | None = None,
+        retry_method: Callable[[int], float]
+        | tuple[Callable[..., float], tuple]
+        | None = None,
+        max_queue_size: int | None = None,
+        max_stored_executions: int | None = None,
+        runner_class: type["BaseRunner"] | None = None,
         # internal variables
         _data: Any = None,
         _state: Any = None,
         _ts: Any = None,
-        _executions: Optional[List[Dict[str, Any]]] = None,
+        _executions: list[dict[str, Any]] | None = None,
     ):
         """
         Queues a task. See README.rst for an explanation of the options.
@@ -135,7 +129,7 @@ class Task:
         else:
             task_id = gen_id()
 
-        task: Dict[str, Any] = {"id": task_id, "func": serialized_name}
+        task: dict[str, Any] = {"id": task_id, "func": serialized_name}
         if unique or unique_key:
             task["unique"] = True
             if unique_key:
@@ -172,19 +166,19 @@ class Task:
         return self._data["id"]
 
     @property
-    def data(self) -> Dict[str, Any]:
+    def data(self) -> dict[str, Any]:
         return self._data
 
     @property
-    def time_last_queued(self) -> Optional[datetime.datetime]:
+    def time_last_queued(self) -> datetime.datetime | None:
         timestamp = self._data.get("time_last_queued")
         if timestamp is None:
             return None
         else:
-            return datetime.datetime.utcfromtimestamp(timestamp)
+            return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
 
     @property
-    def scheduled_at(self) -> Optional[datetime.datetime]:
+    def scheduled_at(self) -> datetime.datetime | None:
         """
         The timestamp (datetime) of when the task was intended to run — either
         the `when` value passed to `delay()`, or the time `delay()` was called
@@ -193,7 +187,7 @@ class Task:
         timestamp = self._data.get("scheduled_at")
         if timestamp is None:
             return None
-        return datetime.datetime.utcfromtimestamp(timestamp)
+        return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
 
     @property
     def state(self) -> str:
@@ -213,19 +207,19 @@ class Task:
         return self._data.get("lock", False)
 
     @property
-    def lock_key(self) -> Optional[str]:
+    def lock_key(self) -> str | None:
         return self._data.get("lock_key")
 
     @property
-    def args(self) -> List[Any]:
+    def args(self) -> list[Any]:
         return self._data.get("args", [])
 
     @property
-    def kwargs(self) -> Dict[str, Any]:
+    def kwargs(self) -> dict[str, Any]:
         return self._data.get("kwargs", {})
 
     @property
-    def hard_timeout(self) -> Optional[float]:
+    def hard_timeout(self) -> float | None:
         return self._data.get("hard_timeout", None)
 
     @property
@@ -233,11 +227,11 @@ class Task:
         return self._data.get("unique", False)
 
     @property
-    def unique_key(self) -> Optional[str]:
+    def unique_key(self) -> str | None:
         return self._data.get("unique_key")
 
     @property
-    def retry_method(self) -> Optional[RetryStrategy]:
+    def retry_method(self) -> RetryStrategy | None:
         if "retry_method" in self._data:
             retry_func, retry_args = self._data["retry_method"]
             return retry_func, retry_args
@@ -245,13 +239,13 @@ class Task:
             return None
 
     @property
-    def retry_on(self) -> List[str]:
+    def retry_on(self) -> list[str]:
         return self._data.get("retry_on")
 
     def should_retry_on(
         self,
-        exception_class: Type[BaseException],
-        logger: Optional[BoundLogger] = None,
+        exception_class: type[BaseException],
+        logger: BoundLogger | None = None,
     ) -> bool:
         """
         Whether this task should be retried when the given exception occurs.
@@ -275,7 +269,7 @@ class Task:
         return self._func
 
     @property
-    def max_stored_executions(self) -> Optional[int]:
+    def max_stored_executions(self) -> int | None:
         return self._data.get("max_stored_executions")
 
     @property
@@ -283,7 +277,7 @@ class Task:
         return self._data.get("runner_class")
 
     @property
-    def ts(self) -> Optional[datetime.datetime]:
+    def ts(self) -> datetime.datetime | None:
         """
         The timestamp (datetime) of the task in the queue, or None, if the task
         hasn't been queued.
@@ -291,15 +285,15 @@ class Task:
         return self._ts
 
     @property
-    def executions(self) -> List[Dict[str, Any]]:
+    def executions(self) -> list[dict[str, Any]]:
         return self._executions
 
     def _move(
         self,
-        from_state: Optional[str] = None,
-        to_state: Optional[str] = None,
-        when: Optional[float] = None,
-        mode: Optional[str] = None,
+        from_state: str | None = None,
+        to_state: str | None = None,
+        when: float | None = None,
+        mode: str | None = None,
     ) -> None:
         """
         Internal helper to move a task from one state to another (e.g. from
@@ -365,8 +359,8 @@ class Task:
 
     def delay(
         self,
-        when: Optional[Union[datetime.timedelta, datetime.datetime]] = None,
-        max_queue_size: Optional[int] = None,
+        when: datetime.timedelta | datetime.datetime | None = None,
+        max_queue_size: int | None = None,
     ) -> None:
         tiger = self.tiger
 
@@ -420,7 +414,7 @@ class Task:
         self._ts = ts
 
     def update_scheduled_time(
-        self, when: Optional[Union[datetime.timedelta, datetime.datetime]]
+        self, when: datetime.timedelta | datetime.datetime | None
     ) -> None:
         """
         Updates a scheduled task's date to the given date. If the task is not
@@ -490,7 +484,7 @@ class Task:
                 _data=data,
                 _state=state,
                 _executions=executions,
-                _ts=datetime.datetime.utcfromtimestamp(score),
+                _ts=datetime.datetime.fromtimestamp(score, tz=datetime.timezone.utc),
             )
         else:
             raise TaskNotFound("Task {} not found.".format(task_id))
@@ -505,7 +499,7 @@ class Task:
         limit: int = 1000,
         load_executions: int = 0,
         include_not_found: bool = False,
-    ) -> Tuple[int, List["Task"]]:
+    ) -> tuple[int, list["Task"]]:
         """
         Return tasks from a queue.
 
@@ -533,7 +527,7 @@ class Task:
         tasks = []
 
         if items:
-            tss = [datetime.datetime.utcfromtimestamp(item[1]) for item in items]
+            tss = [datetime.datetime.fromtimestamp(item[1], tz=datetime.timezone.utc) for item in items]
             if load_executions:
                 pipeline = tiger.connection.pipeline()
                 pipeline.mget([tiger._key("task", item[0]) for item in items])
@@ -641,7 +635,7 @@ class Task:
         )
 
     def _queue_for_next_period(self) -> float:
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         schedule = self.func._task_schedule  # type: ignore[attr-defined]
         if callable(schedule):
             schedule_func = schedule
