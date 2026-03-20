@@ -1,3 +1,3 @@
-from typing import Callable, Tuple
+from typing import Callable
 
-RetryStrategy = Tuple[Callable[..., float], Tuple]
+RetryStrategy = tuple[Callable[..., float], tuple]

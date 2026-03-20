@@ -867,10 +867,10 @@ class TestCase(BaseTestCase):
 
     def test_purge_errored_tasks_older_than(self):
         task_timestamps = [
-            datetime.datetime(2015, 1, 1),
-            datetime.datetime(2016, 1, 1),
-            datetime.datetime(2017, 1, 1),
-            datetime.datetime(2018, 1, 1),
+            datetime.datetime(2015, 1, 1, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2016, 1, 1, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2017, 1, 1, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2018, 1, 1, tzinfo=datetime.timezone.utc),
         ]
         for task_timestamp in task_timestamps:
             with FreezeTime(task_timestamp):
@@ -883,7 +883,7 @@ class TestCase(BaseTestCase):
         assert task_timestamps == actual_timestamps
 
         assert 2 == self.tiger.purge_errored_tasks(
-            last_execution_before=datetime.datetime(2016, 6, 1)
+            last_execution_before=datetime.datetime(2016, 6, 1, tzinfo=datetime.timezone.utc)
         )
         self._ensure_queues(queued={"default": 0}, error={"default": 2})
 

@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from ._internal import g_fork_lock
 
@@ -17,7 +17,7 @@ class StatsThread(threading.Thread):
         self._task_running = False
         self._time_start = time.monotonic()
         self._time_busy: float = 0.0
-        self._task_start_time: Optional[float] = None
+        self._task_start_time: float | None = None
         self.daemon = True  # Exit process if main thread exits unexpectedly
 
         # Lock that protects stats computations from interleaving. For example,

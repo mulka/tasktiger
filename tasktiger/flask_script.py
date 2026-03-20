@@ -1,5 +1,5 @@
 import argparse
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any
 
 from flask_script import Command
 
@@ -37,7 +37,7 @@ class TaskTigerCommand(Command):
         running the worker.
         """
 
-    def run(self, args: List[str]) -> None:
+    def run(self, args: list[str]) -> None:
         # Allow passing a callable that returns the TaskTiger instance.
         if callable(self.tiger):
             self.tiger = self.tiger()

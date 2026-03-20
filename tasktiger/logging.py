@@ -1,11 +1,11 @@
-from typing import Any, Dict
+from typing import Any
 
 from ._internal import g
 
 
 def tasktiger_processor(
-    logger: Any, method_name: Any, event_dict: Dict[str, Any]
-) -> Dict[str, Any]:
+    logger: Any, method_name: Any, event_dict: dict[str, Any]
+) -> dict[str, Any]:
     """
     TaskTiger structlog processor.
 

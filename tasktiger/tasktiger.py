@@ -6,13 +6,7 @@ from typing import (
     Any,
     Callable,
     Collection,
-    Dict,
     Iterable,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
 )
 
 import click
@@ -95,8 +89,8 @@ class TaskTiger:
 
     def __init__(
         self,
-        connection: Optional[redis.Redis] = None,
-        config: Optional[Dict] = None,
+        connection: redis.Redis | None = None,
+        config: dict | None = None,
         setup_structlog: bool = False,
         lazy_init: bool = False,
     ):
@@ -112,10 +106,10 @@ class TaskTiger:
         using init method.
         """
 
-        self.config: Dict[str, Any] = None  # type: ignore[assignment]
+        self.config: dict[str, Any] = None  # type: ignore[assignment]
 
         # List of task functions that are executed periodically.
-        self.periodic_task_funcs: Dict[str, Callable] = {}
+        self.periodic_task_funcs: dict[str, Callable] = {}
 
         if lazy_init:
             assert connection is None and config is None and setup_structlog is False
@@ -128,8 +122,8 @@ class TaskTiger:
 
     def init(
         self,
-        connection: Optional[redis.Redis] = None,
-        config: Optional[Dict] = None,
+        connection: redis.Redis | None = None,
+        config: dict | None = None,
         setup_structlog: bool = False,
     ) -> None:
         """Provide Redis connection and config when lazy initialization is used."""
@@ -137,7 +131,7 @@ class TaskTiger:
         if self.config is not None:
             raise RuntimeError("TaskTiger was already initialized")
 
-        self.config = {  # type: ignore[unreachable]
+        self.config: dict[str, Any] = {  # type: ignore[unreachable]
             # String that is used to prefix all Redis keys
             "REDIS_PREFIX": "t",
             # Name of the Python (structlog) logger
@@ -258,7 +252,7 @@ class TaskTiger:
             raise RuntimeError("Must use current_tasks in a batch task.")
         return g["current_tasks"][0]
 
-    def _get_current_tasks(self) -> List[Task]:
+    def _get_current_tasks(self) -> list[Task]:
         if g["current_tasks"] is None:
             raise RuntimeError("Must be accessed from within a task.")
         if not g["current_task_is_batch"]:
@@ -303,23 +297,23 @@ class TaskTiger:
 
     def task(
         self,
-        _fn: Optional[Callable] = None,
-        queue: Optional[str] = None,
-        hard_timeout: Optional[float] = None,
-        unique: Optional[bool] = None,
-        unique_key: Optional[Collection[str]] = None,
-        lock: Optional[bool] = None,
-        lock_key: Optional[Collection[str]] = None,
-        retry: Optional[bool] = None,
-        retry_on: Optional[Collection[Type[BaseException]]] = None,
-        retry_method: Optional[
-            Union[Callable[[int], float], Tuple[Callable[..., float], Tuple]]
-        ] = None,
-        schedule: Optional[Callable] = None,
+        _fn: Callable | None = None,
+        queue: str | None = None,
+        hard_timeout: float | None = None,
+        unique: bool | None = None,
+        unique_key: Collection[str] | None = None,
+        lock: bool | None = None,
+        lock_key: Collection[str] | None = None,
+        retry: bool | None = None,
+        retry_on: Collection[type[BaseException]] | None = None,
+        retry_method: Callable[[int], float]
+        | tuple[Callable[..., float], tuple]
+        | None = None,
+        schedule: Callable | None = None,
         batch: bool = False,
-        max_queue_size: Optional[int] = None,
-        max_stored_executions: Optional[int] = None,
-        runner_class: Optional[Type["BaseRunner"]] = None,
+        max_queue_size: int | None = None,
+        max_stored_executions: int | None = None,
+        runner_class: type["BaseRunner"] | None = None,
     ) -> Callable:
         """
         Function decorator that defines the behavior of the function when it is
@@ -382,7 +376,7 @@ class TaskTiger:
 
         return _wrap if _fn is None else _wrap(_fn)
 
-    def run_worker_with_args(self, args: List[str]) -> None:
+    def run_worker_with_args(self, args: list[str]) -> None:
         """
         Runs a worker with the given command line args. The use case is running
         a worker from a custom manage script.
@@ -391,13 +385,13 @@ class TaskTiger:
 
     def run_worker(
         self,
-        queues: Optional[str] = None,
-        module: Optional[str] = None,
-        exclude_queues: Optional[str] = None,
-        max_workers_per_queue: Optional[int] = None,
-        store_tracebacks: Optional[bool] = None,
-        executor_class: Optional[Type[Executor]] = None,
-        exit_after: Optional[datetime.timedelta] = None,
+        queues: str | None = None,
+        module: str | None = None,
+        exclude_queues: str | None = None,
+        max_workers_per_queue: int | None = None,
+        store_tracebacks: bool | None = None,
+        executor_class: type[Executor] | None = None,
+        exit_after: datetime.timedelta | None = None,
     ) -> None:
         """
         Main worker entry point method.
@@ -432,21 +426,21 @@ class TaskTiger:
         func: Callable,
         args: Any = None,
         kwargs: Any = None,
-        queue: Optional[str] = None,
-        hard_timeout: Optional[float] = None,
-        unique: Optional[bool] = None,
-        unique_key: Optional[Collection[str]] = None,
-        lock: Optional[bool] = None,
-        lock_key: Optional[Collection[str]] = None,
-        when: Optional[Union[datetime.datetime, datetime.timedelta]] = None,
-        retry: Optional[bool] = None,
-        retry_on: Optional[Collection[Type[BaseException]]] = None,
-        retry_method: Optional[
-            Union[Callable[[int], float], Tuple[Callable[..., float], Tuple]]
-        ] = None,
-        max_queue_size: Optional[int] = None,
-        max_stored_executions: Optional[int] = None,
-        runner_class: Optional[Type["BaseRunner"]] = None,
+        queue: str | None = None,
+        hard_timeout: float | None = None,
+        unique: bool | None = None,
+        unique_key: Collection[str] | None = None,
+        lock: bool | None = None,
+        lock_key: Collection[str] | None = None,
+        when: datetime.datetime | datetime.timedelta | None = None,
+        retry: bool | None = None,
+        retry_on: Collection[type[BaseException]] | None = None,
+        retry_method: Callable[[int], float]
+        | tuple[Callable[..., float], tuple]
+        | None = None,
+        max_queue_size: int | None = None,
+        max_stored_executions: int | None = None,
+        runner_class: type["BaseRunner"] | None = None,
     ) -> Task:
         """
         Queues a task. See README.rst for an explanation of the options.
@@ -474,7 +468,7 @@ class TaskTiger:
 
         return task
 
-    def get_queue_sizes(self, queue: str) -> Dict[str, int]:
+    def get_queue_sizes(self, queue: str) -> dict[str, int]:
         """
         Get the queue's number of tasks in each state.
 
@@ -490,8 +484,8 @@ class TaskTiger:
         return dict(zip(states, results))
 
     def get_sizes_for_queues_and_states(
-        self, queues_and_states: List[Tuple[str, str]]
-    ) -> List[int]:
+        self, queues_and_states: list[tuple[str, str]]
+    ) -> list[int]:
         """
         Get the sizes for the specific queues and states.
 
@@ -511,7 +505,7 @@ class TaskTiger:
 
         return sum(self.get_queue_sizes(queue).values())
 
-    def get_queue_system_lock(self, queue: str) -> Optional[float]:
+    def get_queue_system_lock(self, queue: str) -> float | None:
         """
         Get system lock timeout
 
@@ -537,7 +531,7 @@ class TaskTiger:
         key = self._key(LOCK_REDIS_KEY, queue)
         Semaphore.set_system_lock(self.connection, key, timeout)
 
-    def get_queue_stats(self) -> Dict[str, Dict[str, str]]:
+    def get_queue_stats(self) -> dict[str, dict[str, str]]:
         """
         Returns a dict with stats about all the queues. The keys are the queue
         names, the values are dicts representing how many tasks are in a given
@@ -560,7 +554,7 @@ class TaskTiger:
                 pipeline.zcard(self._key(state, queue))
         card_results = pipeline.execute()
 
-        queue_stats: Dict[str, Dict[str, str]] = defaultdict(dict)
+        queue_stats: dict[str, dict[str, str]] = defaultdict(dict)
         for state, result in zip(states, queue_results):
             for queue in result:
                 queue_stats[queue][state] = card_results.pop(0)
@@ -569,9 +563,9 @@ class TaskTiger:
 
     def purge_errored_tasks(
         self,
-        queues: Optional[List[str]] = None,
-        exclude_queues: Optional[List[str]] = None,
-        last_execution_before: Optional[datetime.datetime] = None,
+        queues: list[str] | None = None,
+        exclude_queues: list[str] | None = None,
+        last_execution_before: datetime.datetime | None = None,
         limit: int = 5000,
     ) -> int:
         """Purge failed tasks left in the ERROR state
@@ -585,7 +579,7 @@ class TaskTiger:
                     queues=['my-queue'],
                     exclude_queues=['other-queue'],
                     last_execution_before=(
-                        datetime.datetime.utcnow()
+                        datetime.datetime.now(datetime.timezone.utc)
                         - datetime.timedelta(days=14)
                     ),
                     limit=limit,
@@ -624,7 +618,7 @@ class TaskTiger:
                     continue
 
                 skip = 0
-                total_tasks: Optional[int] = None
+                total_tasks: int | None = None
                 task_limit = 5000
                 while total_tasks is None or skip < total_tasks:
                     total_tasks, tasks = Task.tasks_from_queue(
@@ -721,23 +715,23 @@ class TaskTiger:
 def run_worker(
     context: Any,
     host: str,
-    port: Optional[int],
-    db: Optional[int],
-    password: Optional[str],
-    queues: Optional[str] = None,
-    module: Optional[str] = None,
-    exclude_queues: Optional[str] = None,
-    max_workers_per_queue: Optional[int] = None,
-    store_tracebacks: Optional[bool] = None,
-    executor: Optional[str] = "fork",
-    exit_after: Optional[int] = None,
+    port: int | None,
+    db: int | None,
+    password: str | None,
+    queues: str | None = None,
+    module: str | None = None,
+    exclude_queues: str | None = None,
+    max_workers_per_queue: int | None = None,
+    store_tracebacks: bool | None = None,
+    executor: str | None = "fork",
+    exit_after: int | None = None,
 ) -> None:
     conn = redis.Redis(
         host, int(port or 6379), int(db or 0), password, decode_responses=True
     )
     tiger = context.obj or TaskTiger(setup_structlog=True, connection=conn)
 
-    executor_class: Type[Executor]
+    executor_class: type[Executor]
     if not executor or executor == "fork":
         executor_class = ForkExecutor
     elif executor == "sync":

@@ -13,12 +13,7 @@ from typing import (
     Callable,
     Collection,
     Iterable,
-    List,
-    Optional,
-    Tuple,
-    Type,
     TypedDict,
-    Union,
 )
 
 from .exceptions import TaskImportError
@@ -51,9 +46,9 @@ g_fork_lock = threading.Lock()
 
 
 class _G(TypedDict):
-    tiger: Optional["TaskTiger"]
-    current_task_is_batch: Optional[bool]
-    current_tasks: Optional[List["Task"]]
+    tiger: "TaskTiger | None"
+    current_task_is_batch: bool | None
+    current_tasks: "list[Task] | None"
 
 
 g: _G = {"tiger": None, "current_task_is_batch": None, "current_tasks": None}
@@ -91,7 +86,7 @@ def gen_unique_id(serialized_name: str, args: Any, kwargs: Any) -> str:
     ).hexdigest()
 
 
-def serialize_func_name(func: Union[Callable, Type]) -> str:
+def serialize_func_name(func: Callable | type) -> str:
     """
     Returns the dotted serialized path to the passed function.
     """
@@ -134,7 +129,7 @@ def reversed_dotted_parts(s: str) -> Iterable[str]:
         yield s[:idx]
 
 
-def serialize_retry_method(retry_method: Any) -> Tuple[str, Tuple]:
+def serialize_retry_method(retry_method: Any) -> tuple[str, tuple]:
     if callable(retry_method):
         return (serialize_func_name(retry_method), ())
     else:
@@ -142,23 +137,26 @@ def serialize_retry_method(retry_method: Any) -> Tuple[str, Tuple]:
 
 
 def get_timestamp(
-    when: Optional[Union[datetime.timedelta, datetime.datetime]],
-) -> Optional[float]:
+    when: datetime.timedelta | datetime.datetime | None,
+) -> float | None:
     # convert timedelta to datetime
     if isinstance(when, datetime.timedelta):
-        when = datetime.datetime.utcnow() + when
+        when = datetime.datetime.now(datetime.timezone.utc) + when
 
     if when:
-        # Convert to unixtime: utctimetuple drops microseconds so we add
-        # them manually.
-        return calendar.timegm(when.utctimetuple()) + when.microsecond / 1.0e6
+        # Convert to unixtime. For timezone-aware datetimes, timestamp()
+        # handles the conversion correctly including microseconds. For naive
+        # datetimes (assumed UTC), use calendar.timegm with timetuple.
+        if when.tzinfo is not None:
+            return when.timestamp()
+        return calendar.timegm(when.timetuple()) + when.microsecond / 1.0e6
     return None
 
 
 def queue_matches(
     queue: str,
-    only_queues: Optional[Collection[str]] = None,
-    exclude_queues: Optional[Collection[str]] = None,
+    only_queues: Collection[str] | None = None,
+    exclude_queues: Collection[str] | None = None,
 ) -> bool:
     """Checks if the given queue matches against only/exclude constraints
 
